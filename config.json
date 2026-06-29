@@ -1,0 +1,92 @@
+{
+  "_comment": "Mainpaper AI Sales System — Configuración de Fuentes de Datos",
+  "_version": "1.0",
+  "_last_updated": "2026-06-30",
+
+  "google_drive": {
+    "enabled": true,
+    "folder_id": "1LewahFtgl4Vhz0teZ4hUjfg9tmcYsb17",
+    "folder_url": "https://drive.google.com/drive/folders/1LewahFtgl4Vhz0teZ4hUjfg9tmcYsb17",
+    "file_patterns": ["*.xlsx", "*.xls", "*.csv"],
+    "sheet_type": "powerbi_estadisticas",
+    "sync_interval_minutes": 30,
+    "credentials_file": "credentials.json",
+    "token_file": "token.json"
+  },
+
+  "gmail": {
+    "enabled": true,
+    "account": "madyu002@gmail.com",
+    "search_query": "subject:(中汇文具 MainPaper Servicio de facturación de pedidos) has:attachment filename:(xlsx OR xls)",
+    "subject_keywords": [
+      "中汇文具",
+      "MainPaper",
+      "Servicio de facturación de pedidos",
+      "pedido",
+      "orden",
+      "order"
+    ],
+    "attachment_types": [".xlsx", ".xls"],
+    "mark_as_read_after_process": true,
+    "sync_interval_minutes": 15,
+    "output_file": "data/mail_pedidos.json"
+  },
+
+  "local_files": {
+    "enabled": true,
+    "paths": [
+      {
+        "label": "Power BI Estadísticas",
+        "path": "",
+        "_comment": "Pon aquí la ruta absoluta local, ej: /Users/dengyu/Documents/reporte_powerbi.xlsx",
+        "type": "powerbi_estadisticas"
+      },
+      {
+        "label": "Pedidos Gmail Exportados",
+        "path": "",
+        "_comment": "Ruta local del Excel de pedidos exportado manualmente desde Gmail",
+        "type": "mail_pedidos"
+      }
+    ],
+    "watch_for_changes": false,
+    "watch_interval_seconds": 60
+  },
+
+  "output": {
+    "data_directory": "data",
+    "powerbi_file": "data/powerbi_estadisticas.json",
+    "gmail_orders_file": "data/mail_pedidos.json",
+    "processed_files_log": "data/processed_files.json",
+    "log_file": "ingest_agent.log"
+  },
+
+  "column_mapping": {
+    "_comment": "Mapeo de columnas de tus archivos Excel reales. Deja en blanco para auto-detectar.",
+    "powerbi": {
+      "fecha": "fecha_reporte",
+      "categoria": "Categoría",
+      "subcategoria": "Subcategoría",
+      "producto": "Producto",
+      "ventas": "Ventas €",
+      "ventas_ano_anterior": "Ventas año anterior €",
+      "n_total_articulos": "Unidades"
+    },
+    "gmail_orders": {
+      "order_id": "N° Pedido",
+      "fecha_pedido": "Fecha",
+      "cliente_email": "Email Cliente",
+      "producto_sku": "SKU",
+      "cantidad": "Cantidad",
+      "precio_unitario": "Precio Unitario",
+      "total_linea": "Total Línea"
+    }
+  },
+
+  "dashboard": {
+    "auto_load_on_start": true,
+    "use_demo_data_if_no_files": true,
+    "currency_symbol": "€",
+    "date_format": "YYYY-MM-DD",
+    "language": "es"
+  }
+}

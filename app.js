@@ -17,9 +17,7 @@ let sortAscending = false;
 let trendChartInstance = null;
 
 // DOM Elements
-const dragOverlay = document.getElementById('drag-overlay');
 const fileInput = document.getElementById('file-input');
-const welcomeCard = document.getElementById('welcome-card');
 const dashboardContent = document.getElementById('dashboard-content');
 const loadDemoBtn = document.getElementById('load-demo');
 const uploadBtn = document.getElementById('upload-btn');
@@ -132,41 +130,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Try auto-loading data
+  // Try auto-loading data from data/ directory, fallback to demo
   await loadDatabase();
+  // Dashboard always visible — show with demo data if nothing loaded
+  dashboardContent.classList.remove('hidden');
+  if (!salesData.length && !macroData.length) {
+    loadDemoData();
+  } else {
+    refreshDashboard(true);
+  }
 });
 
 // Setup Drag & Drop
 let dragCounter = 0;
 function setupDragAndDrop() {
-  window.addEventListener('dragenter', (e) => {
-    e.preventDefault();
-    dragCounter++;
-    if (dragCounter === 1) {
-      dragOverlay.classList.remove('hidden');
-      dragOverlay.classList.add('flex');
-    }
-  });
-
-  window.addEventListener('dragover', (e) => {
-    e.preventDefault();
-  });
-
-  window.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    dragCounter--;
-    if (dragCounter === 0) {
-      dragOverlay.classList.add('hidden');
-      dragOverlay.classList.remove('flex');
-    }
-  });
+  window.addEventListener('dragenter', (e) => { e.preventDefault(); });
+  window.addEventListener('dragover',  (e) => { e.preventDefault(); });
+  window.addEventListener('dragleave', (e) => { e.preventDefault(); });
 
   window.addEventListener('drop', (e) => {
     e.preventDefault();
-    dragCounter = 0;
-    dragOverlay.classList.add('hidden');
-    dragOverlay.classList.remove('flex');
-
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       processExcelFile(files[0]);
@@ -219,6 +202,10 @@ async function loadDatabase() {
   } catch (e) {
     console.log("No powerbi_estadisticas.json database found, using fallbacks.");
   }
+
+  // Update data source badge
+  const hasRealData = salesData.length > 0 || macroData.length > 0;
+  setDataSourceBadge(hasRealData ? 'live' : 'demo');
 }
 
 // Load Demo Data explicitly
@@ -228,10 +215,22 @@ function loadDemoData() {
   dimProductos = window.mockDimProductos || [];
   stockInventory = window.mockStockInventory || [];
   aiInsights = window.mockAIInsights || {};
-  
-  welcomeCard.classList.add('hidden');
   dashboardContent.classList.remove('hidden');
+  setDataSourceBadge('demo');
   refreshDashboard(true);
+}
+
+// Update data source badge in header
+function setDataSourceBadge(mode) {
+  const badge = document.getElementById('data-source-badge');
+  if (!badge) return;
+  if (mode === 'live') {
+    badge.textContent = '● LIVE DATA';
+    badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider bg-emerald-900/60 text-emerald-400 border border-emerald-700/50';
+  } else {
+    badge.textContent = '◎ DEMO MODE';
+    badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider bg-[#D97706]/10 text-[#D97706] border border-[#D97706]/30';
+  }
 }
 
 // Process sheet using SheetJS

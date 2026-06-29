@@ -128,6 +128,7 @@
 
         <!-- Actions -->
         <div class="flex items-center gap-2">
+          <span id="data-source-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider bg-[#D97706]/10 text-[#D97706] border border-[#D97706]/30">◎ DEMO MODE</span>
           <button id="upload-btn" class="px-3.5 py-1.5 rounded-lg text-xs font-mono text-[#09101A] bg-[#D97706] hover:bg-[#B45309] transition-all flex items-center gap-1.5 font-bold shadow-md shadow-[#D97706]/10">
             📂 Importar Excel
           </button>
@@ -138,32 +139,11 @@
         </div>
       </header>
 
-      <!-- Welcome / Upload Area (cuando no hay datos) -->
-      <div id="welcome-card" class="flex-1 flex flex-col items-center justify-center p-8 bg-[#09101A] overflow-y-auto">
-        <div class="bg-[#111827] border border-[#374151] rounded-2xl p-12 max-w-xl text-center flex flex-col items-center gap-6 hover:border-[#D97706]/40 transition-all cursor-pointer shadow-2xl" onclick="document.getElementById('file-input').click()">
-          <div class="w-16 h-16 rounded-full bg-[#D97706]/10 flex items-center justify-center text-4xl text-[#D97706] animate-pulse">
-            📊
-          </div>
-          <h3 class="text-xl font-bold text-[#F9FAFB] font-mono">Mainpaper AI Sales System</h3>
-          <p class="text-sm text-[#9CA3AF] leading-relaxed">
-            Sincroniza y visualiza datos agregados de <strong class="text-white">Power BI</strong> con pedidos en tiempo real recibidos por <strong class="text-white">Gmail</strong>. Genera proyecciones de stock autónomas con Gemini 1.5 Pro.
-          </p>
-          <div class="bg-[#1F2937] border border-[#374151] rounded-lg p-3 text-xs text-[#9CA3AF] font-mono text-left w-full space-y-1">
-            <p>✔ Arrastra y suelta un reporte de Power BI o Pedidos Gmail</p>
-            <p>✔ Procesamiento 100% local sin subir archivos al servidor</p>
-            <p>✔ Mapeo automático de SKUs y reconciliación inteligente</p>
-          </div>
-          <button class="px-6 py-2.5 bg-[#D97706] text-[#09101A] font-bold rounded-lg hover:bg-[#B45309] hover:text-white transition-all shadow-lg shadow-[#D97706]/20">
-            Seleccionar archivo Excel/CSV
-          </button>
-        </div>
-      </div>
-
       <!-- Tab selectors for sheets (if multi-sheet file loaded) -->
       <div id="tabs-container" class="tabs-container flex px-6 py-2 gap-2 bg-[#111827] border-b border-[#374151] overflow-x-auto hidden"></div>
 
       <!-- Scrollable Main Dashboard Content -->
-      <main id="dashboard-content" class="flex-1 overflow-y-auto p-5 bg-[#09101A] hidden space-y-5">
+      <main id="dashboard-content" class="flex-1 overflow-y-auto p-5 bg-[#09101A] space-y-5">
 
         <!-- [TAREA 3] SECCIÓN A: KPI Cards -->
         <section id="kpi-section" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
