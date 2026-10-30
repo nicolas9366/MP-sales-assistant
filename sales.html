@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mainpaper AI Sales System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: IBM Plex Mono & DM Sans -->
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS (xlsx.full.min.js) CDN for local Excel/CSV parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['DM Sans', 'sans-serif'],
+            mono: ['IBM Plex Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              gold: '#D97706',
+              goldHover: '#B45309',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-[#09101A] text-[#F9FAFB] font-sans antialiased h-full flex flex-col overflow-hidden">
+
+
+  <!-- [A] Critical Alert Banner — siempre visible arriba si hay stock crítico, máxima jerarquía -->
+  <div id="alert-banner" class="hidden w-full h-10 bg-red-600 text-white flex items-center justify-between px-6 text-xs font-mono tracking-wider z-50 fixed top-0 left-0 shadow-lg">
+    <div class="flex items-center gap-2">
+      <span class="animate-ping inline-flex h-2.5 w-2.5 rounded-full bg-white opacity-75"></span>
+      <span id="alert-text">⚠ ALERTA DE STOCK CRÍTICO: Hay productos bajo el mínimo</span>
+    </div>
+    <button onclick="document.getElementById('stock-alerts-list').scrollIntoView({ behavior: 'smooth' })" class="underline hover:text-red-200 transition-colors font-bold">Ver alertas →</button>
+  </div>
+
+  <!-- Main layout container -->
+  <div id="app-shell" class="flex flex-1 h-full pt-0 transition-all duration-300">
+
+    <!-- [B1] Sidebar (Navegación lateral fija) -->
+    <aside class="w-56 shrink-0 bg-[#111827] border-r border-[#374151] flex flex-col justify-between z-20">
+      <div>
+        <!-- Logo -->
+        <div class="h-14 flex items-center px-5 border-b border-[#374151] gap-2">
+          <div class="w-6 h-6 rounded bg-[#D97706] flex items-center justify-center font-mono font-bold text-[#09101A] text-xs">M</div>
+          <div class="flex items-baseline">
+            <span class="font-mono font-bold text-[#D97706] text-sm tracking-widest uppercase">Mainpaper</span>
+            <span class="ml-1 font-mono text-[#9CA3AF] text-xs">AI</span>
+          </div>
+        </div>
+
+        <!-- Nav Links -->
+        <nav class="py-4 px-3 space-y-1">
+          <a href="#overview" class="nav-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#F9FAFB] bg-[#1F2937] border-l-2 border-[#D97706] transition-all">
+            <span class="text-base text-[#D97706]">◫</span> Vista General
+          </a>
+          <a href="#stock-analysis" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#9CA3AF] hover:bg-[#1F2937]/50 hover:text-[#F9FAFB] transition-all">
+            <span class="text-base">⚡</span> Análisis de Stock
+          </a>
+          <a href="#orders-history" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#9CA3AF] hover:bg-[#1F2937]/50 hover:text-[#F9FAFB] transition-all">
+            <span class="text-base">📋</span> Historial Pedidos
+          </a>
+          <a href="#ai-config" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#9CA3AF] hover:bg-[#1F2937]/50 hover:text-[#F9FAFB] transition-all">
+            <span class="text-base">✦</span> Configuración IA
+          </a>
+        </nav>
+      </div>
+
+      <!-- Agent Connection Status -->
+      <div class="p-4 border-t border-[#374151] space-y-3 text-xs font-mono bg-[#0B0F19]">
+        <p class="text-[#6B7280] font-bold uppercase tracking-wider text-[10px]">Agentes de Automatización</p>
+        <div class="flex items-center gap-2">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="text-[#9CA3AF]">Gmail Orders</span>
+          <span id="gmail-last-sync" class="ml-auto text-[#6B7280] text-[10px]">5m ago</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="text-[#9CA3AF]">Drive PowerBI</span>
+          <span id="drive-last-sync" class="ml-auto text-[#6B7280] text-[10px]">12m ago</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- [B2] Right Content Area -->
+    <div class="flex-1 flex flex-col overflow-hidden bg-[#09101A]">
+
+      <!-- [B2a] Top Header Bar -->
+      <header class="h-14 shrink-0 bg-[#111827] border-b border-[#374151] flex items-center justify-between px-6 gap-4 z-10 shadow-md">
+        
+        <!-- SKU Global Search -->
+        <div class="relative flex-1 max-w-sm">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] text-sm font-mono">⌕</span>
+          <input id="sku-search"
+                 type="text"
+                 placeholder="Buscar SKU o producto..."
+                 class="w-full bg-[#1F2937] border border-[#374151] rounded-lg pl-8 pr-4 py-1.5 text-sm text-[#F9FAFB] placeholder-[#6B7280] font-mono focus:outline-none focus:border-[#D97706] focus:ring-1 focus:ring-[#D97706] transition-all" />
+        </div>
+
+        <!-- Date Range Selector -->
+        <div class="flex items-center gap-1.5 bg-[#09101A] border border-[#374151] rounded-lg p-0.5">
+          <button class="date-btn px-3 py-1 rounded text-xs font-mono text-[#9CA3AF] hover:text-[#F9FAFB] transition-colors" data-range="7d">7D</button>
+          <button class="date-btn px-3 py-1 rounded text-xs font-mono text-[#9CA3AF] hover:text-[#F9FAFB] transition-colors" data-range="30d">30D</button>
+          <button class="date-btn active px-3 py-1 rounded text-xs font-mono text-[#D97706] bg-[#1F2937] font-semibold transition-all" data-range="ytd">YTD</button>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2">
+          <span id="data-source-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider bg-[#D97706]/10 text-[#D97706] border border-[#D97706]/30">◎ DEMO MODE</span>
+          <button id="upload-btn" class="px-3.5 py-1.5 rounded-lg text-xs font-mono text-[#09101A] bg-[#D97706] hover:bg-[#B45309] transition-all flex items-center gap-1.5 font-bold shadow-md shadow-[#D97706]/10">
+            📂 Importar Excel
+          </button>
+          <button id="load-demo" class="px-3.5 py-1.5 rounded-lg text-xs font-mono text-[#9CA3AF] bg-[#1F2937] border border-[#374151] hover:border-[#D97706] hover:text-[#D97706] transition-all">
+            📊 Datos Demo
+          </button>
+          <input type="file" id="file-input" class="hidden" accept=".xlsx, .xls, .csv">
+        </div>
+      </header>
+
+      <!-- Tab selectors for sheets (if multi-sheet file loaded) -->
+      <div id="tabs-container" class="tabs-container flex px-6 py-2 gap-2 bg-[#111827] border-b border-[#374151] overflow-x-auto hidden"></div>
+
+      <!-- Scrollable Main Dashboard Content -->
+      <main id="dashboard-content" class="flex-1 overflow-y-auto p-5 bg-[#09101A] space-y-5">
+
+        <!-- [TAREA 3] SECCIÓN A: KPI Cards -->
+        <section id="kpi-section" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+          <!-- KPI 1: Ventas Totales -->
+          <div class="bg-[#111827] border border-[#374151] rounded-xl p-5 flex flex-col gap-3 hover:border-[#D97706]/40 transition-all group shadow-lg">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-[#9CA3AF] uppercase tracking-widest">Ventas Totales</span>
+              <span class="text-[#D97706] text-base font-mono">◈</span>
+            </div>
+            <div class="font-mono text-3xl font-bold text-[#F9FAFB] tracking-tight" id="kpi-total-sales">€0</div>
+            <div class="flex items-center gap-1.5 text-xs font-mono">
+              <span class="text-emerald-400 font-semibold" id="kpi-yoy-sales">+0.0%</span>
+              <span class="text-[#6B7280]">vs año anterior</span>
+            </div>
+            <div class="h-8 flex items-end gap-0.5 mt-2" id="kpi-sparkline-sales">
+              <!-- JS Sparkline bars -->
+            </div>
+          </div>
+
+          <!-- KPI 2: Unidades Vendidas -->
+          <div class="bg-[#111827] border border-[#374151] rounded-xl p-5 flex flex-col gap-3 hover:border-blue-500/40 transition-all group shadow-lg">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-[#9CA3AF] uppercase tracking-widest">Unidades Vendidas</span>
+              <span class="text-blue-400 text-base font-mono">📦</span>
+            </div>
+            <div class="font-mono text-3xl font-bold text-[#F9FAFB] tracking-tight" id="kpi-total-qty">0</div>
+            <div class="flex items-center gap-1.5 text-xs font-mono">
+              <span class="text-emerald-400 font-semibold" id="kpi-yoy-qty">+0.0%</span>
+              <span class="text-[#6B7280]">vs año anterior</span>
+            </div>
+            <div class="h-8 flex items-end gap-0.5 mt-2" id="kpi-sparkline-qty">
+              <!-- JS Sparkline bars -->
+            </div>
+          </div>
+
+          <!-- KPI 3: Pedidos Registrados -->
+          <div class="bg-[#111827] border border-[#374151] rounded-xl p-5 flex flex-col gap-3 hover:border-emerald-500/40 transition-all group shadow-lg">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-[#9CA3AF] uppercase tracking-widest">Transacciones</span>
+              <span class="text-emerald-400 text-base font-mono">📝</span>
+            </div>
+            <div class="font-mono text-3xl font-bold text-[#F9FAFB] tracking-tight" id="kpi-transactions">0</div>
+            <div class="flex items-center gap-1.5 text-xs font-mono">
+              <span class="text-[#9CA3AF]" id="kpi-yoy-transactions">Estable</span>
+              <span class="text-[#6B7280]">pedidos parsed</span>
+            </div>
+            <div class="h-8 flex items-end gap-0.5 mt-2" id="kpi-sparkline-transactions">
+              <!-- JS Sparkline bars -->
+            </div>
+          </div>
+
+          <!-- KPI 4: Ticket Promedio (AOV) -->
+          <div class="bg-[#111827] border border-[#374151] rounded-xl p-5 flex flex-col gap-3 hover:border-red-500/40 transition-all group shadow-lg">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-[#9CA3AF] uppercase tracking-widest">Ticket Promedio</span>
+              <span class="text-red-400 text-base font-mono">📈</span>
+            </div>
+            <div class="font-mono text-3xl font-bold text-[#F9FAFB] tracking-tight" id="kpi-avg-order">€0</div>
+            <div class="flex items-center gap-1.5 text-xs font-mono">
+              <span class="text-emerald-400 font-semibold" id="kpi-yoy-avg-order">+0.0%</span>
+              <span class="text-[#6B7280]">AOV global</span>
+            </div>
+            <div class="h-8 flex items-end gap-0.5 mt-2" id="kpi-sparkline-avg-order">
+              <!-- JS Sparkline bars -->
+            </div>
+          </div>
+        </section>
+
+        <!-- [TAREA 4] SECCIÓN B: AI Insights Panel + SECCIÓN D: Stock Alert Drawer -->
+        <section class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          
+          <!-- [B] AI Insights Panel (2/3 ancho) -->
+          <div class="xl:col-span-2 bg-[#111827] border border-indigo-900/60 rounded-xl p-5 bg-gradient-to-br from-indigo-950/20 to-transparent flex flex-col justify-between shadow-xl">
+            <div>
+              <div class="flex items-center gap-2 mb-4">
+                <span class="text-indigo-400 text-lg animate-pulse">✦</span>
+                <h2 class="font-mono text-sm font-semibold text-[#F9FAFB] tracking-wider uppercase">Predicciones AI Gemini 1.5 Pro</h2>
+                <span class="ml-auto text-xs font-mono text-[#6B7280]" id="ai-generated-at">Calculando...</span>
+              </div>
+
+              <!-- Loading Skeleton -->
+              <div id="ai-skeleton" class="space-y-3 py-2">
+                <div class="h-3.5 bg-[#1F2937] rounded-md w-full animate-pulse"></div>
+                <div class="h-3.5 bg-[#1F2937] rounded-md w-11/12 animate-pulse"></div>
+                <div class="h-3.5 bg-[#1F2937] rounded-md w-9/12 animate-pulse"></div>
+              </div>
+
+              <!-- AI Narrative text -->
+              <p id="ai-narrative" class="hidden text-sm text-[#D1D5DB] leading-relaxed mb-6 font-light">
+                Análisis no disponible. Cargue archivos para activar Gemini.
+              </p>
+
+              <!-- Sugerencias de SKU / Compras -->
+              <div id="ai-sku-table" class="hidden mb-6">
+                <p class="text-xs font-mono text-[#9CA3AF] uppercase tracking-widest mb-3">Recomendaciones de Reabastecimiento Automatizadas</p>
+                <div class="overflow-hidden border border-[#1F2937] rounded-lg">
+                  <table class="w-full text-xs font-mono">
+                    <thead>
+                      <tr class="bg-[#1F2937]/50 text-[#9CA3AF] border-b border-[#1F2937]">
+                        <th class="text-left p-2.5 font-medium">SKU Producto</th>
+                        <th class="text-left p-2.5 font-medium">Categoría</th>
+                        <th class="text-right p-2.5 font-medium">Stock Actual</th>
+                        <th class="text-right p-2.5 font-medium">Sugerencia Comp</th>
+                        <th class="text-center p-2.5 font-medium">Prioridad</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ai-sku-rows" class="divide-y divide-[#1F2937] bg-[#0E131F]/50">
+                      <!-- AI Suggested rows -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Quick Action Buttons -->
+            <div id="ai-actions" class="hidden flex flex-wrap gap-2.5 border-t border-[#1F2937] pt-4 mt-2">
+              <button onclick="alert('Se ha enviado la orden de reabastecimiento borrador al sistema de compras (Dim_Productos)')" class="px-4 py-2 rounded-lg border border-indigo-500/50 text-indigo-300 text-xs font-mono hover:bg-indigo-500/10 hover:border-indigo-400 transition-all font-semibold">
+                ✚ Generar Pedido de Compra
+              </button>
+              <button onclick="alert('Exportando proyección de ventas trimestral de Mainpaper AI...')" class="px-4 py-2 rounded-lg border border-[#374151] text-[#9CA3AF] text-xs font-mono hover:bg-[#1F2937] hover:text-[#F9FAFB] transition-all">
+                📥 Descargar Proyección Completa
+              </button>
+            </div>
+          </div>
+
+          <!-- [D] Stock Alert Drawer (1/3 ancho) -->
+          <div class="bg-[#111827] border border-[#374151] rounded-xl p-5 flex flex-col justify-between shadow-xl">
+            <div>
+              <div class="flex items-center gap-2 mb-4">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                <h2 class="font-mono text-sm font-semibold text-[#F9FAFB] tracking-wider uppercase">Estado de Stock Crítico</h2>
+              </div>
+              <p class="text-xs text-[#9CA3AF] mb-3">Monitor en tiempo real de SKUs bajo el stock mínimo de seguridad.</p>
+              
+              <div id="stock-alerts-list" class="space-y-2 overflow-y-auto max-h-[280px] pr-1">
+                <!-- Stock alerts items will be generated by JS -->
+                <div class="text-center py-6 text-xs text-[#6B7280] font-mono">No hay datos de inventario cargados.</div>
+              </div>
+            </div>
+            
+            <div class="border-t border-[#1F2937] pt-4 mt-3 flex items-center justify-between text-xs font-mono text-[#9CA3AF]">
+              <span>Alerta activa: <strong class="text-red-400" id="total-alerts-count">0</strong> SKUs</span>
+              <button onclick="alert('Notificación enviada al equipo de almacén.')" class="text-[#D97706] hover:underline">Notificar Almacén ↗</button>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- [TAREA 5] SECCIÓN C: Data Table con Filtros Cruzados + Charts -->
+        <section class="grid grid-cols-1 xl:grid-cols-5 gap-5">
+          
+          <!-- Charts Trend (2/5 ancho) -->
+          <div class="xl:col-span-2 bg-[#111827] border border-[#374151] rounded-xl p-5 flex flex-col justify-between shadow-xl">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xs font-mono text-[#9CA3AF] uppercase tracking-wider font-semibold">Tendencia de Ventas (Macro)</h3>
+                <!-- Toggle Diario/Mensual -->
+                <div class="flex bg-[#09101A] border border-[#374151] rounded-lg p-0.5 text-xs font-mono">
+                  <button id="view-daily" class="px-3 py-1 rounded-md text-[#9CA3AF] hover:text-[#F9FAFB] transition-all">Diario</button>
+                  <button id="view-monthly" class="px-3 py-1 rounded-md bg-[#1F2937] text-[#D97706] font-semibold transition-all">Mensual</button>
+                </div>
+              </div>
+              <div class="relative h-56 w-full">
+                <canvas id="trend-chart"></canvas>
+              </div>
+            </div>
+            <div class="text-[10px] text-[#6B7280] font-mono mt-3 border-t border-[#1F2937] pt-2">
+              * Datos del gráfico agregados mensualmente desde Power BI. Clic en las barras para filtrar la tabla.
+            </div>
+          </div>
+
+          <!-- Data Table Recientes (3/5 ancho) -->
+          <div class="xl:col-span-3 bg-[#111827] border border-[#374151] rounded-xl p-5 flex flex-col justify-between shadow-xl">
+            <div>
+              <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                <div class="flex items-center gap-3">
+                  <h3 class="text-xs font-mono text-[#9CA3AF] uppercase tracking-wider font-semibold">Pedidos Recientes (Gmail)</h3>
+                  
+                  <!-- Cross-filter badge -->
+                  <div id="cross-filter-badge" class="hidden flex items-center gap-1.5 px-2 py-0.5 bg-[#D97706]/10 border border-[#D97706]/40 rounded-lg text-[#D97706] text-xs font-mono">
+                    <span>Filtro:</span>
+                    <span id="cross-filter-label" class="font-bold"></span>
+                    <button id="cross-filter-clear" class="ml-1 hover:text-[#F9FAFB] font-bold">✕</button>
+                  </div>
+                </div>
+
+                <!-- Column mapping state indicator -->
+                <div class="text-[10px] text-[#9CA3AF] bg-[#1F2937] border border-[#374151] rounded px-2 py-0.5 font-mono">
+                  Cruzar con: <span class="text-[#D97706] font-bold">Dim_Productos</span>
+                </div>
+              </div>
+
+              <!-- Table -->
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs font-mono text-left">
+                  <thead>
+                    <tr class="border-b border-[#374151] text-[#6B7280]">
+                      <th onclick="sortTable('date')" class="pb-3 cursor-pointer hover:text-[#9CA3AF] transition-colors select-none">Fecha ↕</th>
+                      <th onclick="sortTable('sku')" class="pb-3 cursor-pointer hover:text-[#9CA3AF] transition-colors select-none">SKU ↕</th>
+                      <th class="pb-3">Producto</th>
+                      <th onclick="sortTable('qty')" class="pb-3 text-right cursor-pointer hover:text-[#9CA3AF] transition-colors select-none">Cantidad ↕</th>
+                      <th onclick="sortTable('total')" class="pb-3 text-right cursor-pointer hover:text-[#9CA3AF] transition-colors select-none">Total ↕</th>
+                      <th class="pb-3 text-center">SKU Map</th>
+                    </tr>
+                  </thead>
+                  <tbody id="orders-table-body" class="divide-y divide-[#1F2937]">
+                    <!-- Table row content generated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex items-center justify-between mt-4 pt-4 border-t border-[#1F2937] text-xs font-mono text-[#9CA3AF]">
+              <span id="table-info">Mostrando 0–0 de 0</span>
+              <div class="flex gap-2">
+                <button id="prev-page" class="px-2.5 py-1.5 rounded border border-[#374151] hover:border-[#D97706] hover:text-[#D97706] disabled:opacity-30 disabled:hover:border-[#374151] disabled:hover:text-[#9CA3AF] transition-colors">
+                  ← Anterior
+                </button>
+                <button id="next-page" class="px-2.5 py-1.5 rounded border border-[#374151] hover:border-[#D97706] hover:text-[#D97706] disabled:opacity-30 disabled:hover:border-[#374151] disabled:hover:text-[#9CA3AF] transition-colors">
+                  Siguiente →
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+
+    </div>
+  </div>
+
+  <!-- Custom Scripts -->
+  <script src="sample_data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
